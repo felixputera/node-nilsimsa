@@ -2,9 +2,10 @@
   "name": "nilsimsa",
   "version": "0.2.2",
   "description": "A NodeJS implementation of the Nilsimsa hash",
-  "main": "index.js",
+  "main": "dist/nilsimsa.js",
   "scripts": {
-    "test": "mocha"
+    "test": "mocha",
+    "build": "tsc"
   },
   "bin": {
     "nilsimsa": "./bin/cli.js"
@@ -27,7 +28,10 @@
     "node": ">=6.10"
   },
   "devDependencies": {
+    "@types/node": "^12.12.7",
+    "faker": "^4.1.0",
     "mocha": "^6.2.0",
-    "faker": "^4.1.0"
+    "prettier": "^1.19.1",
+    "typescript": "^3.7.2"
   }
 }
