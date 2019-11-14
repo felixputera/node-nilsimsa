@@ -5,25 +5,25 @@ const POPC = Buffer.from([0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4, 1, 2, 
 
 type HashFunction<T> = (a: T, b: T, c: T, n: number) => number;
 
-function tran3(a: number, b: number, c: number, n: number) {
+function tran3(a: number, b: number, c: number, n: number): number {
   return (
     ((TRAN[(a + n) & 255] ^ (TRAN[b] * (n + n + 1))) + TRAN[c ^ TRAN[n]]) & 255
   );
 }
 
-function compareDigest(hash1: Buffer, hash2: Buffer) {
+function compareDigest(hash1: Buffer, hash2: Buffer): number {
   if (hash1.length != hash2.length || hash1.length != 32) {
     // 256 bits per hash
     throw new RangeError("Invalid Nilsimsa hashes");
   }
 
-  let bit_diff_sum = 0;
+  let bitDiffSum = 0;
 
-  for (let byte_idx = 32; byte_idx--; ) {
-    bit_diff_sum += POPC[hash1[byte_idx] ^ hash2[byte_idx]];
+  for (let byteIdx = 32; byteIdx--; ) {
+    bitDiffSum += POPC[hash1[byteIdx] ^ hash2[byteIdx]];
   }
 
-  return 128 - bit_diff_sum;
+  return 128 - bitDiffSum;
 }
 
 class Nilsimsa<T> {
@@ -49,11 +49,11 @@ class Nilsimsa<T> {
    * Initializes basic Nilsimsa which takes int stream (Buffer) as input,
    * with tran3 hash function, and empty character value of -1
    */
-  static default() {
+  static default(): Nilsimsa<number> {
     return new Nilsimsa<number>(tran3);
   }
 
-  update(data: Iterable<T>) {
+  update(data: Iterable<T>): void {
     for (const ch of data) {
       this.count += 1;
       if (this.lastCh1 && this.lastCh0) {
@@ -80,8 +80,8 @@ class Nilsimsa<T> {
     }
   }
 
-  digest() {
-    let total: number = 0;
+  digest(): Buffer {
+    let total = 0;
 
     switch (this.count) {
       case 0:
