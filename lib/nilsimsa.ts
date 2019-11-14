@@ -11,74 +11,68 @@ function tran3(a: number, b: number, c: number, n: number) {
   );
 }
 
-class BaseNilsimsa<T> {
+function compareDigest(hash1: Buffer, hash2: Buffer) {
+  if (hash1.length != hash2.length || hash1.length != 32) {
+    // 256 bits per hash
+    throw new RangeError("Invalid Nilsimsa hashes");
+  }
+
+  let bit_diff_sum = 0;
+
+  for (let byte_idx = 32; byte_idx--; ) {
+    bit_diff_sum += POPC[hash1[byte_idx] ^ hash2[byte_idx]];
+  }
+
+  return 128 - bit_diff_sum;
+}
+
+class Nilsimsa<T> {
   count: number;
   acc: number[];
-  lastCh0: T;
-  lastCh1: T;
-  lastCh2: T;
-  lastCh3: T;
-  emptyCh: T;
+  lastCh0?: T;
+  lastCh1?: T;
+  lastCh2?: T;
+  lastCh3?: T;
   hashFn: HashFunction<T>;
 
   /**
-   * Nilsimsa contsructor
-   * @param data - iterable object of characters which will be hashed as triplets
-   * @param [hashFn] - callback hash function, defaults to nilsimsa's tran3 (also known as Tran53)
-   * @param [emptyCh] - empty character value used in hashing as padding, defaults to -1
+   * Initializes Nilsimsa
+   * @param hashFn - hash function callback
    */
-  constructor(data: Iterable<T>, hashFn: HashFunction<T>, emptyCh: T) {
+  constructor(hashFn: HashFunction<T>) {
     this.count = 0;
     this.acc = new Array(256).fill(0);
-    this.lastCh0 = emptyCh;
-    this.lastCh1 = emptyCh;
-    this.lastCh2 = emptyCh;
-    this.lastCh3 = emptyCh;
-    this.emptyCh = emptyCh;
     this.hashFn = hashFn;
-
-    this.update(data);
   }
 
-  static compare(
-    hash1: string,
-    hash2: string,
-    encoding: BufferEncoding = "hex"
-  ) {
-    const buf1 = Buffer.from(hash1, encoding);
-    const buf2 = Buffer.from(hash2, encoding);
-
-    if (buf1.length != buf2.length || buf1.length != 32) {
-      // 256 bits per hash
-      throw new RangeError("Invalid Nilsimsa hashes");
-    }
-
-    let bit_diff_sum = 0;
-
-    for (let byte_idx = 32; byte_idx--; ) {
-      bit_diff_sum += POPC[buf1[byte_idx] ^ buf2[byte_idx]];
-    }
-
-    return 128 - bit_diff_sum;
+  /**
+   * Initializes basic Nilsimsa which takes int stream (Buffer) as input,
+   * with tran3 hash function, and empty character value of -1
+   */
+  static default() {
+    return new Nilsimsa<number>(tran3);
   }
 
   update(data: Iterable<T>) {
     for (const ch of data) {
       this.count += 1;
-      if (this.lastCh1 !== this.emptyCh) {
+      if (this.lastCh1 && this.lastCh0) {
         this.acc[this.hashFn(ch, this.lastCh0, this.lastCh1, 0)] += 1;
+
+        if (this.lastCh2) {
+          this.acc[this.hashFn(ch, this.lastCh0, this.lastCh2, 1)] += 1;
+          this.acc[this.hashFn(ch, this.lastCh1, this.lastCh2, 2)] += 1;
+
+          if (this.lastCh3) {
+            this.acc[this.hashFn(ch, this.lastCh0, this.lastCh3, 3)] += 1;
+            this.acc[this.hashFn(ch, this.lastCh1, this.lastCh3, 4)] += 1;
+            this.acc[this.hashFn(ch, this.lastCh2, this.lastCh3, 5)] += 1;
+            this.acc[this.hashFn(this.lastCh3, this.lastCh0, ch, 6)] += 1;
+            this.acc[this.hashFn(this.lastCh3, this.lastCh2, ch, 7)] += 1;
+          }
+        }
       }
-      if (this.lastCh2 !== this.emptyCh) {
-        this.acc[this.hashFn(ch, this.lastCh0, this.lastCh2, 1)] += 1;
-        this.acc[this.hashFn(ch, this.lastCh1, this.lastCh2, 2)] += 1;
-      }
-      if (this.lastCh3 !== this.emptyCh) {
-        this.acc[this.hashFn(ch, this.lastCh0, this.lastCh3, 3)] += 1;
-        this.acc[this.hashFn(ch, this.lastCh1, this.lastCh3, 4)] += 1;
-        this.acc[this.hashFn(ch, this.lastCh2, this.lastCh3, 5)] += 1;
-        this.acc[this.hashFn(this.lastCh3, this.lastCh0, ch, 6)] += 1;
-        this.acc[this.hashFn(this.lastCh3, this.lastCh2, ch, 7)] += 1;
-      }
+
       this.lastCh3 = this.lastCh2;
       this.lastCh2 = this.lastCh1;
       this.lastCh1 = this.lastCh0;
@@ -86,7 +80,7 @@ class BaseNilsimsa<T> {
     }
   }
 
-  digest(encoding: BufferEncoding = "hex") {
+  digest() {
     let total: number = 0;
 
     switch (this.count) {
@@ -114,19 +108,9 @@ class BaseNilsimsa<T> {
     }
 
     code.reverse();
-    return Buffer.from(code).toString(encoding);
-  }
-}
-
-class Nilsimsa extends BaseNilsimsa<number> {
-  constructor(data: Buffer) {
-    super(data, tran3, -1);
-  }
-
-  update(data: Buffer) {
-    super.update(data);
+    return Buffer.from(code);
   }
 }
 
 export default Nilsimsa;
-export { BaseNilsimsa, tran3 };
+export { compareDigest, tran3 };
