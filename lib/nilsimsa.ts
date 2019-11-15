@@ -39,18 +39,22 @@ class Nilsimsa<T> {
    * Initializes Nilsimsa
    * @param hashFn - hash function callback
    */
-  constructor(hashFn: HashFunction<T>) {
+  constructor(hashFn: HashFunction<T>, data?: Iterable<T>) {
     this.count = 0;
     this.acc = new Array(256).fill(0);
     this.hashFn = hashFn;
+
+    if (data) {
+      this.update(data);
+    }
   }
 
   /**
    * Initializes basic Nilsimsa which takes int stream (Buffer) as input,
    * with tran3 hash function, and empty character value of -1
    */
-  static default(): Nilsimsa<number> {
-    return new Nilsimsa<number>(tran3);
+  static default(data?: Iterable<number>): Nilsimsa<number> {
+    return new Nilsimsa<number>(tran3, data);
   }
 
   update(data: Iterable<T>): void {
